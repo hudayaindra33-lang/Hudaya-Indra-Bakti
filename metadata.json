@@ -1,0 +1,5 @@
+{
+  "name": "EduSphere LMS",
+  "description": "A modern Learning Management System inspired by Ruang Guru, featuring separate dashboards for students and admins. Admins can manage courses, including generating course descriptions with AI. Students can browse courses, view lessons, and track their progress.",
+  "requestFramePermissions": []
+}
