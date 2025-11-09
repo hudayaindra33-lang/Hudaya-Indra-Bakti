@@ -1,0 +1,138 @@
+
+import React, { useState, useContext } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import Header from '../components/Header';
+import { AuthContext, DataContext } from '../App';
+import { Subject, Assignment } from '../types';
+
+const StudentDashboard: React.FC = () => {
+    const authContext = useContext(AuthContext);
+    const dataContext = useContext(DataContext);
+    const [activeView, setActiveView] = useState('home');
+    
+    const currentUser = authContext?.currentUser;
+    const studentAssignments = dataContext?.assignments.filter(a => a.studentId === currentUser?.id) || [];
+    const studentGrades = dataContext?.grades.filter(g => g.studentId === currentUser?.id) || [];
+    const avgGrade = studentGrades.length > 0 ? (studentGrades.reduce((sum, g) => sum + g.score, 0) / studentGrades.length).toFixed(1) : 'N/A';
+
+    const gradeChartData = studentGrades.map(g => ({
+        name: g.subject,
+        Nilai: g.score,
+    }));
+    
+    const navItems = [
+        { name: 'Beranda', action: () => setActiveView('home') },
+        { name: 'Daftar Materi', action: () => setActiveView('materials') },
+        { name: 'Tugas', action: () => setActiveView('assignments') },
+        { name: 'Grafik Belajar', action: () => setActiveView('chart') },
+    ];
+
+    const renderView = () => {
+        switch (activeView) {
+            case 'materials':
+                return <MaterialList />;
+            case 'assignments':
+                return <AssignmentSpace assignments={studentAssignments} />;
+            case 'chart':
+                return <LearningChart chartData={gradeChartData} avgGrade={avgGrade} />;
+            case 'home':
+            default:
+                return (
+                     <div>
+                        <h2 className="text-3xl font-bold text-gray-800 mb-2">Selamat Datang, {currentUser?.name}!</h2>
+                        <p className="text-gray-600 mb-6">Siap untuk belajar hari ini? Mari kita mulai!</p>
+                        <MaterialList />
+                        <div className="mt-8 grid md:grid-cols-2 gap-8">
+                            <AssignmentSpace assignments={studentAssignments.slice(0,2)} />
+                            <LearningChart chartData={gradeChartData} avgGrade={avgGrade} />
+                        </div>
+                    </div>
+                );
+        }
+    };
+    
+    return (
+        <div>
+            <Header navItems={navItems} />
+            <div className="p-4 sm:p-6 lg:p-8 bg-gray-100 min-h-screen">
+                {renderView()}
+            </div>
+        </div>
+    );
+};
+
+// Sub-components for StudentDashboard
+const MaterialList: React.FC = () => (
+    <div>
+        <h3 className="text-2xl font-semibold text-gray-700 mb-4">Daftar Materi</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Object.values(Subject).map(subject => (
+                <div key={subject} className="bg-white rounded-xl shadow-md p-6 transform hover:-translate-y-1 transition-transform duration-300">
+                    <div className="mb-4">
+                        <img src={`https://picsum.photos/seed/${subject}/400/200`} alt={subject} className="rounded-lg w-full h-32 object-cover" />
+                    </div>
+                    <h4 className="text-xl font-bold text-[#4A90E2] mb-4">{subject}</h4>
+                    <div className="flex flex-col space-y-2">
+                        <button className="w-full bg-[#4A90E2] text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Buka Materi</button>
+                        <button className="w-full bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">Lanjutkan Belajar</button>
+                    </div>
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
+const AssignmentSpace: React.FC<{ assignments: Assignment[] }> = ({ assignments }) => (
+    <div className="bg-white rounded-xl shadow-md p-6">
+        <h3 className="text-2xl font-semibold text-gray-700 mb-4">Ruang Tugas</h3>
+        <div className="space-y-4">
+            {assignments.map(ass => (
+                <div key={ass.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <p className="font-bold text-gray-800">{ass.title}</p>
+                            <p className="text-sm text-gray-500">{ass.subject}</p>
+                        </div>
+                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${ass.status === 'Sudah dikumpulkan' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {ass.status}
+                        </span>
+                    </div>
+                    {ass.status === 'Sudah dikumpulkan' && (
+                        <div className="mt-3 pt-3 border-t">
+                            <p><strong>Nilai:</strong> {ass.grade ?? 'Belum dinilai'}</p>
+                            <p className="mt-1"><strong>Komentar Pak Huda:</strong> <span className="italic text-gray-600">{ass.comment ?? '-'}</span></p>
+                        </div>
+                    )}
+                     {ass.status === 'Belum dikumpulkan' && (
+                        <div className="mt-4">
+                             <input type="file" className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                        </div>
+                    )}
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
+const LearningChart: React.FC<{chartData: any[], avgGrade: string}> = ({ chartData, avgGrade }) => (
+    <div className="bg-white rounded-xl shadow-md p-6">
+        <h3 className="text-2xl font-semibold text-gray-700 mb-4">Grafik Hasil Belajar</h3>
+        <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{fontSize: 12}} />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="Nilai" fill="#FFA552" />
+            </BarChart>
+        </ResponsiveContainer>
+        <div className="text-center mt-4">
+            <p className="text-lg">Nilai Rata-rata: <span className="font-bold text-[#4A90E2]">{avgGrade}</span></p>
+            <p className="text-lg font-semibold text-green-600 mt-2">“Terus semangat, kamu hebat!”</p>
+        </div>
+    </div>
+);
+
+
+export default StudentDashboard;
